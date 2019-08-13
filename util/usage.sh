@@ -2,7 +2,7 @@
 # Copyright 2019 Streamsets Inc.
 
 function usage() {
-  echo "Usage: ./getagent.sh --install-type [INSTALL_TYPE] --agent-id [AGENT_ID] --credentials [CREDENTIALS] --environment-id [ENVIRONMENT_ID] --environment-name [ENVIRONMENT_NAME] --streamsets-cloud-url [STREAMSETS_CLOUD_URL] [OPTION]..."
+  echo "Usage: ./getagent.sh --install-type [INSTALL_TYPE] --agent-id [AGENT_ID] --credentials [CREDENTIALS] --environment-id [ENVIRONMENT_ID] --streamsets-cloud-url [STREAMSETS_CLOUD_URL] [OPTION]..."
 }
 
 function incorrectUsage() {
@@ -12,8 +12,7 @@ function incorrectUsage() {
   --install-type          INSTALL_TYPE              Installation type
   --agent-id              AGENT_ID                  Agent ID
   --credentials           CREDENTIALS               Agent credentials
-  --environment-id        ENV_ID                    Environment ID
-  --environment-name      ENV_NAME                  Environment name
+  --environment-id        ENVIRONMENT_ID            Environment ID
   --streamsets-cloud-url  STREAMSETS_CLOUD_URL      Organization subdomain
 
   Optional Arguments:

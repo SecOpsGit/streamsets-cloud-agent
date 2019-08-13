@@ -60,7 +60,7 @@ if [[ $# -gt 0 && "$1" == "-h" ]]; then
   usage
   cleanup
   exit 0
-elif [[ $# -ge 12 ]]; then
+elif [[ $# -ge 10 ]]; then
   while [[ -n "$1" ]]; do
     if [[ -z "$2" ]]; then
       usage
@@ -79,9 +79,6 @@ elif [[ $# -ge 12 ]]; then
         ;;
       --environment-id)
         ENV_ID="$2"
-        ;;
-      --environment-name)
-        ENV_NAME="$2"
         ;;
       --streamsets-cloud-url)
         STREAMSETS_CLOUD_URL="$2"
@@ -104,18 +101,13 @@ elif [[ $# -ge 12 ]]; then
       --namespace)
         NS="$2"
         ;;
-      *)
-        usage
-        cleanup
-        exit 1
-        ;;
     esac
     shift
     shift
   done
 fi
 
-if [[ -z "$AGENT_ID" || -z "$AGENT_CREDENTIALS" || -z "$ENV_ID" || -z "$ENV_NAME" || -z "$STREAMSETS_CLOUD_URL" || -z "$INSTALL_TYPE" ]]; then
+if [[ -z "$AGENT_ID" || -z "$AGENT_CREDENTIALS" || -z "$ENV_ID" || -z "$STREAMSETS_CLOUD_URL" || -z "$INSTALL_TYPE" ]]; then
   incorrectUsage
   usage
   cleanup
@@ -138,12 +130,12 @@ if [[ -n "$PATH_MOUNT" && $INSTALL_TYPE != "LINUX_VM" ]]; then
   exit 1
 fi
 
-if [[ -d $HOME/.streamsets/cloudenv/"$ENV_NAME"-$ENV_ID ]]; then
+if [[ -d $HOME/.streamsets/cloudenv/$ENV_ID ]]; then
   echo "Error: installation already exists for environment with this ID"
   cleanup
   exit 1
 fi
-mv $HOME/.streamsets/cloudenv/tmp $HOME/.streamsets/cloudenv/"$ENV_NAME"-$ENV_ID
+mv $HOME/.streamsets/cloudenv/tmp $HOME/.streamsets/cloudenv/$ENV_ID
 chmod u+x delagent.sh
 
 function printN() {
@@ -179,7 +171,7 @@ if [[ -n $(kubectl get deployments -n "$NS" --field-selector=metadata.name=launc
       -n $(kubectl get svc -n "$NS" --field-selector=metadata.name=streamsets-agent 2> /dev/null) ]]; then
   echo "Agent resources found in this namespace."
   echo "Either delete these resources by running delagent.sh or specify a different namespace (under Advanced options in the Install Agent screen) and retry to continue."
-  rm -rf $HOME/.streamsets/cloudenv/"$ENV_NAME"-$ENV_ID
+  rm -rf $HOME/.streamsets/cloudenv/$ENV_ID
   exit 1
 fi
 
