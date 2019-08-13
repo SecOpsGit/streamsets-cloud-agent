@@ -171,7 +171,6 @@ if [[ -n $(kubectl get deployments -n "$NS" --field-selector=metadata.name=launc
       -n $(kubectl get svc -n "$NS" --field-selector=metadata.name=streamsets-agent 2> /dev/null) ]]; then
   echo "Agent resources found in this namespace."
   echo "Either delete these resources by running delagent.sh or specify a different namespace (under Advanced options in the Install Agent screen) and retry to continue."
-  rm -rf $HOME/.streamsets/cloudenv/$ENV_ID
   exit 1
 fi
 

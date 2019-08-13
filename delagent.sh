@@ -41,3 +41,5 @@ kubectl delete -f "$SCRIPT_DIR"/yaml/streamsets-agent-roles.yaml -n $NS
 [[ -f "$SCRIPT_DIR/yaml/pv-dir-mount.yaml" ]] && kubectl delete -f "$SCRIPT_DIR"/yaml/pv-dir-mount.yaml
 
 [[ $NS != "default" ]] && kubectl delete namespace $NS
+
+rm -rf "$SCRIPT_DIR"
