@@ -22,7 +22,7 @@ function initIngressUrl() {
 }
 
 [[ $INSTALL_TYPE == "MINIKUBE" ]] && PUBLICIP=$(minikube ip)
-[[ $INSTALL_TYPE == "DOCKER" ]] && PUBLICIP="localhost"
+[[ $INSTALL_TYPE == "DOCKER" ]] && PUBLICIP="127.0.0.1"
 
 SHOULD_ACCEPT_SELF_SIGNED=0
 
