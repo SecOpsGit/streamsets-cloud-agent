@@ -14,7 +14,7 @@ cd cloudenv
 
 mkdir tmp && cd tmp
 
-readonly SCRIPT_URL=https://agent.streamsetscloud.com
+readonly SCRIPT_URL=https://raw.githubusercontent.com/streamsets/streamsets-cloud-agent/master
 
 # Download script files
 curl -O -s "$SCRIPT_URL"/agent_commands.sh
