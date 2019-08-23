@@ -135,7 +135,7 @@ fi
 if [[ -n "$PORT" && $INSTALL_TYPE != "LINUX_VM" ]]; then
   echo "Warning: Agent port can only be set on Linux VM installations and will be ignored"
 fi
-if [[ $INSTALL_TYPE == "LINUX_VM" && ( "$PORT" -lt 30000 || "$PORT" -gt 32767 ) ]]; then
+if [[ $INSTALL_TYPE == "LINUX_VM" && -n "$PORT" && ( "$PORT" -lt 30000 || "$PORT" -gt 32767 ) ]]; then
   echo "Error: The specified port is outside the usable range of 30000-32767"
   cleanup
   exit 1
