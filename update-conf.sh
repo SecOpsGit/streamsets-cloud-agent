@@ -13,12 +13,12 @@ function initIngressUrl() {
     [[ $INSTALL_TYPE == "LINUX_VM" ]] && PUBLICIP=$(kubectl describe svc traefik --namespace kube-system | grep Ingress | awk '{print $3}')
     sleep 10
    done
-   [[ $INSTALL_TYPE == "LINUX_VM" ]] && kubectl -n ingress-nginx patch svc ingress-nginx --patch '{"spec": {"ports": [{"name": "https","nodePort": 30300,"port": 443,"protocol": "TCP","targetPort": "https"}]}}'
+   [[ $INSTALL_TYPE == "LINUX_VM" ]] && kubectl -n ingress-nginx patch svc ingress-nginx --patch '{"spec": {"ports": [{"name": "https","nodePort": '$PORT',"port": 443,"protocol": "TCP","targetPort": "https"}]}}'
   fi
   [[ -z "$INGRESS_URL" ]] && [[ $INSTALL_TYPE == "DOCKER" ]] || [[ $INSTALL_TYPE == "MINIKUBE" ]] && INGRESS_URL="https://$PUBLICIP/agent"
   [[ -z "$INGRESS_URL" ]] && [[ $INSTALL_TYPE == "GKE" ]] && INGRESS_URL="https://$PUBLICIP"
   [[ -z "$INGRESS_URL" ]] && [[ $INSTALL_TYPE == "AKS" ]] && INGRESS_URL="https://$PUBLICIP"
-  [[ -z "$INGRESS_URL" ]] && [[ $INSTALL_TYPE == "LINUX_VM" ]] && INGRESS_URL="https://$PUBLICIP:30300/agent"
+  [[ -z "$INGRESS_URL" ]] && [[ $INSTALL_TYPE == "LINUX_VM" ]] && INGRESS_URL="https://$PUBLICIP:$PORT/agent"
 }
 
 [[ $INSTALL_TYPE == "MINIKUBE" ]] && PUBLICIP=$(minikube ip)

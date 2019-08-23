@@ -14,7 +14,7 @@ cd cloudenv
 
 mkdir tmp && cd tmp
 
-readonly SCRIPT_URL=https://raw.githubusercontent.com/streamsets/streamsets-cloud-agent/master
+readonly SCRIPT_URL=https://agent.streamsetscloud.com
 
 # Download script files
 curl -O -s "$SCRIPT_URL"/agent_commands.sh
@@ -101,6 +101,9 @@ elif [[ $# -ge 10 ]]; then
       --namespace)
         NS="$2"
         ;;
+      --port)
+        PORT="$2"
+        ;;
     esac
     shift
     shift
@@ -129,6 +132,17 @@ if [[ -n "$PATH_MOUNT" && $INSTALL_TYPE != "LINUX_VM" ]]; then
   cleanup
   exit 1
 fi
+if [[ -n "$PORT" && $INSTALL_TYPE != "LINUX_VM" ]]; then
+  echo "Warning: Agent port can only be set on Linux VM installations and will be ignored"
+fi
+if [[ $INSTALL_TYPE == "LINUX_VM" && ( "$PORT" -lt 30000 || "$PORT" -gt 32767 ) ]]; then
+  echo "Error: The specified port is outside the usable range of 30000-32767"
+  cleanup
+  exit 1
+fi
+
+# Set port to 30300 if the user did not specify another
+[[ -z "$PORT" ]] && PORT=30300
 
 if [[ -d $HOME/.streamsets/cloudenv/$ENV_ID ]]; then
   echo "Error: installation already exists for environment with this ID"
