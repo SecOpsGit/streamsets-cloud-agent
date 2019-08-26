@@ -178,13 +178,38 @@ fi
 
 NS=${NS:-default}
 
+# Get resources left from previous runs of this script
+DEPLOYMENTS="$(kubectl get deployments -n "$NS" --field-selector=metadata.name=launcher --show-labels --no-headers 2> /dev/null)"
+INGRESS="$(kubectl get ingress -n "$NS" --show-labels 2> /dev/null | grep agent-ingress)"
+CONFIGMAPS="$(kubectl get configmaps -n "$NS" --field-selector=metadata.name=launcher-conf --show-labels --no-headers 2> /dev/null)"
+SVC="$(kubectl get svc -n "$NS" --field-selector=metadata.name=streamsets-agent --show-labels --no-headers 2> /dev/null)"
+
+# Build an array of environment ids where agent resources are found
+RESOURCES_LIST="$DEPLOYMENTS"$'\n'"$INGRESS"$'\n'"$CONFIGMAPS"$'\n'"$SVC"
+declare -a OLD_ENVIRONMENTS
+while IFS=$'\n' read -ra RESOURCE_ARR; do
+  for resource in "${RESOURCE_ARR[@]}"; do
+    # Get the env label value only
+    ENV="$(echo "$resource" | awk '{print $NF}' | grep env=)"
+    ENV="${ENV#"env="}"
+
+    if [[ -n "$ENV" ]]; then
+      OLD_ENVIRONMENTS+=( "$ENV" )
+    fi
+  done
+done <<< "$RESOURCES_LIST"
+
+# Remove duplicates from the array
+OLD_ENVIRONMENTS=($(echo "${OLD_ENVIRONMENTS[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
+
 # Check for resources left from previous runs of this script
-if [[ -n $(kubectl get deployments -n "$NS" --field-selector=metadata.name=launcher 2> /dev/null) || \
-      -n $(kubectl get ingress -n "$NS" 2> /dev/null | grep agent-ingress) || \
-      -n $(kubectl get configmaps -n "$NS" --field-selector=metadata.name=launcher-conf 2> /dev/null) || \
-      -n $(kubectl get svc -n "$NS" --field-selector=metadata.name=streamsets-agent 2> /dev/null) ]]; then
+if [[ -n "$DEPLOYMENTS" || -n "$INGRESS" || -n "$CONFIGMAPS" || -n "$SVC" ]]; then
   echo "Agent resources found in this namespace."
-  echo "Either delete these resources by running delagent.sh or specify a different namespace (under Advanced options in the Install Agent screen) and retry to continue."
+  echo "Either delete these resources by running the following command(s) or specify a different namespace (under Advanced options in the Install Agent screen) and retry to continue."
+  for env in "${OLD_ENVIRONMENTS[@]}"; do
+    echo "     ~/.streamsets/cloudenv/$env/delagent.sh --namespace $NS"
+  done
+  rm -rf $HOME/.streamsets/cloudenv/tmp $HOME/.streamsets/cloudenv/$ENV_ID
   exit 1
 fi
 
@@ -199,30 +224,37 @@ if [[ $INSTALL_TYPE == "LINUX_VM" ]]; then
   done
 fi
 
-[[ $INSTALL_TYPE == "LINUX_VM" ]] || [[ $INSTALL_TYPE == "DOCKER" ]] || [[ $INSTALL_TYPE == "AKS" ]] && kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.24.1/deploy/mandatory.yaml
-
-[[ $INSTALL_TYPE == "LINUX_VM" ]] || [[ $INSTALL_TYPE == "DOCKER" ]] || [[ $INSTALL_TYPE == "AKS" ]] && kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.24.1/deploy/provider/cloud-generic.yaml
+if [[ $INSTALL_TYPE == "LINUX_VM" || $INSTALL_TYPE == "DOCKER" || $INSTALL_TYPE == "AKS" ]]; then
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.24.1/deploy/mandatory.yaml
+  kubectl label -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.24.1/deploy/mandatory.yaml env=$ENV_ID --overwrite
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.24.1/deploy/provider/cloud-generic.yaml
+  kubectl label -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.24.1/deploy/provider/cloud-generic.yaml env=$ENV_ID --overwrite
+fi
 
 #[[ $INSTALL_TYPE == "DOCKER" ]] &&  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.24.1/deploy/provider/baremetal/service-nodeport.yaml
 
 [[ $NS != "default" ]] && kubectl create namespace $NS
 
 kubectl create -f yaml/streamsets-agent-service.yaml -n $NS
+kubectl label -f yaml/streamsets-agent-service.yaml env=$ENV_ID -n $NS
 
 # Create config
 source update-conf.sh
 
-
-[[ ! -z "$PATH_MOUNT" ]] && kubectl create -f yaml/pv-dir-mount.yaml -n $NS
+[[ -n "$PATH_MOUNT" ]] && kubectl create -f yaml/pv-dir-mount.yaml -n $NS
+[[ -n "$PATH_MOUNT" ]] && kubectl label -f yaml/pv-dir-mount.yaml env=$ENV_ID -n $NS
 
 # Deploy the configuration for the operator
 kubectl create configmap launcher-conf --from-file=launcher.conf -n $NS
+kubectl label configmap launcher-conf env=$ENV_ID -n $NS
 
 # Install Agent Roles
 kubectl apply -f yaml/streamsets-agent-roles.yaml -n $NS
+kubectl label -f yaml/streamsets-agent-roles.yaml env=$ENV_ID -n $NS
 
 # Install Agent
 kubectl apply -f yaml/streamsets-agent.yaml -n $NS
+kubectl label -f yaml/streamsets-agent.yaml env=$ENV_ID -n $NS --overwrite
 
 # Wait for Agent to start up
 WAIT_MESSAGE="Starting Agent. This may take a few minutes...."
