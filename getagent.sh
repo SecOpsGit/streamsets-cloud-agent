@@ -37,6 +37,7 @@ curl -O -s "$SCRIPT_URL"/yaml/pv-hostpath.yaml
 curl -O -s "$SCRIPT_URL"/yaml/pvc-test.yaml
 curl -O -s "$SCRIPT_URL"/yaml/streamsets-agent-roles.yaml
 curl -O -s "$SCRIPT_URL"/yaml/streamsets-agent-service.yaml
+curl -O -s "$SCRIPT_URL"/yaml/streamsets-pipeline-previewer.yaml
 curl -O -s "$SCRIPT_URL"/yaml/template-pv-dir-mount.yaml
 curl -O -s "$SCRIPT_URL"/yaml/template-streamsets-agent.yaml
 
@@ -140,6 +141,11 @@ if [[ $INSTALL_TYPE == "LINUX_VM" && -n "$PORT" && ( "$PORT" -lt 30000 || "$PORT
   cleanup
   exit 1
 fi
+if [[ $INSTALL_TYPE == "LINUX_VM" && $OSTYPE == "darwin"* ]]; then
+  echo "Error: This OS is not supported for Linux machine installation. Please try using Minikube or Docker Desktop for Mac instead"
+  cleanup
+  exit 1
+fi
 
 # Set port to 30300 if the user did not specify another
 [[ -z "$PORT" ]] && PORT=30300
@@ -200,7 +206,7 @@ while IFS=$'\n' read -ra RESOURCE_ARR; do
 done <<< "$RESOURCES_LIST"
 
 # Remove duplicates from the array
-OLD_ENVIRONMENTS=($(echo "${OLD_ENVIRONMENTS[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
+OLD_ENVIRONMENTS=($(printf "%s\n" "${OLD_ENVIRONMENTS[@]}" | sort -u | tr '\n' ' '))
 
 # Check for resources left from previous runs of this script
 if [[ -n "$DEPLOYMENTS" || -n "$INGRESS" || -n "$CONFIGMAPS" || -n "$SVC" ]]; then
@@ -224,12 +230,9 @@ if [[ $INSTALL_TYPE == "LINUX_VM" ]]; then
   done
 fi
 
-if [[ $INSTALL_TYPE == "LINUX_VM" || $INSTALL_TYPE == "DOCKER" || $INSTALL_TYPE == "AKS" ]]; then
-  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.24.1/deploy/mandatory.yaml
-  kubectl label -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.24.1/deploy/mandatory.yaml env=$ENV_ID --overwrite
-  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.24.1/deploy/provider/cloud-generic.yaml
-  kubectl label -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.24.1/deploy/provider/cloud-generic.yaml env=$ENV_ID --overwrite
-fi
+[[ $INSTALL_TYPE == "LINUX_VM" ]] || [[ $INSTALL_TYPE == "DOCKER" ]] || [[ $INSTALL_TYPE == "AKS" ]] && kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.24.1/deploy/mandatory.yaml
+
+[[ $INSTALL_TYPE == "LINUX_VM" ]] || [[ $INSTALL_TYPE == "DOCKER" ]] || [[ $INSTALL_TYPE == "AKS" ]] && kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.24.1/deploy/provider/cloud-generic.yaml
 
 #[[ $INSTALL_TYPE == "DOCKER" ]] &&  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.24.1/deploy/provider/baremetal/service-nodeport.yaml
 
@@ -252,9 +255,12 @@ kubectl label configmap launcher-conf env=$ENV_ID -n $NS
 kubectl apply -f yaml/streamsets-agent-roles.yaml -n $NS
 kubectl label -f yaml/streamsets-agent-roles.yaml env=$ENV_ID -n $NS
 
+# Install previewer deployment and pipeline deployment
+kubectl apply -f yaml/streamsets-pipeline-previewer.yaml -n $NS
+
 # Install Agent
 kubectl apply -f yaml/streamsets-agent.yaml -n $NS
-kubectl label -f yaml/streamsets-agent.yaml env=$ENV_ID -n $NS --overwrite
+kubectl label -f yaml/streamsets-agent.yaml env=$ENV_ID -n $NS
 
 # Wait for Agent to start up
 WAIT_MESSAGE="Starting Agent. This may take a few minutes...."
