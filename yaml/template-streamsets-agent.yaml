@@ -96,7 +96,7 @@ spec:
        - name: dockercred
       containers:
         - name: launcher
-          image: streamsets/launcher:1.0.0-beta02
+          image: streamsets/launcher:1.0.0-beta03
           volumeMounts:
             - name: launcher-conf
               mountPath: /opt/streamsets/launcher/etc/launcher.conf

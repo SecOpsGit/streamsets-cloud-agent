@@ -22,6 +22,7 @@ curl -O -s "$SCRIPT_URL"/delagent.sh
 curl -O -s "$SCRIPT_URL"/previewer-crd.yaml
 curl -O -s "$SCRIPT_URL"/template-fetcher.conf
 curl -O -s "$SCRIPT_URL"/template-launcher.conf
+curl -O -s "$SCRIPT_URL"/run_executor.sh
 curl -O -s "$SCRIPT_URL"/update-conf.sh
 
 mkdir yaml && cd yaml
@@ -217,6 +218,9 @@ source update-conf.sh
 
 # Deploy the configuration for the operator
 kubectl create configmap launcher-conf --from-file=launcher.conf -n $NS
+
+# Deploy the configuration for executor start
+kubectl create configmap executor-cmd-config --from-file run_executor.sh
 
 # Install Agent Roles
 kubectl apply -f yaml/streamsets-agent-roles.yaml -n $NS

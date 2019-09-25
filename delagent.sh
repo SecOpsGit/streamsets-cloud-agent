@@ -22,6 +22,8 @@ INGRESS_TYPE=$(echo $INGRESS_NAME  | awk '{print $1}' | awk -F "-" '{print $1}')
 kubectl delete configmap launcher-conf -n $NS
 kubectl delete secret agenttls -n $NS
 
+kubectl delete configmap executor-cmd-config -n $NS
+
 kubectl delete -f "$SCRIPT_DIR"/yaml/streamsets-agent-service.yaml -n $NS
 kubectl delete -f "$SCRIPT_DIR"/yaml/streamsets-agent.yaml -n $NS
 kubectl delete -f "$SCRIPT_DIR"/yaml/streamsets-agent-roles.yaml -n $NS
