@@ -19,14 +19,17 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 INGRESS_NAME=$(kubectl get ingress | grep -i "agent-ingress")
 INGRESS_TYPE=$(echo $INGRESS_NAME  | awk '{print $1}' | awk -F "-" '{print $1}')
 
-kubectl delete configmap launcher-conf -n $NS
-kubectl delete secret agenttls -n $NS
+# Usually you want to use this alias so namespaces are handled for you
+KUBECTL_NS="kubectl -n $NS"
 
-kubectl delete configmap executor-cmd-config -n $NS
+$KUBECTL_NS delete configmap launcher-conf
+$KUBECTL_NS delete secret agenttls
 
-kubectl delete -f "$SCRIPT_DIR"/yaml/streamsets-agent-service.yaml -n $NS
-kubectl delete -f "$SCRIPT_DIR"/yaml/streamsets-agent.yaml -n $NS
-kubectl delete -f "$SCRIPT_DIR"/yaml/streamsets-agent-roles.yaml -n $NS
+$KUBECTL_NS delete configmap executor-cmd-config
+
+$KUBECTL_NS delete -f "$SCRIPT_DIR"/yaml/streamsets-agent-service.yaml
+$KUBECTL_NS delete -f "$SCRIPT_DIR"/yaml/streamsets-agent.yaml
+$KUBECTL_NS delete -f "$SCRIPT_DIR"/yaml/streamsets-agent-roles.yaml
 
 [[ $INGRESS_TYPE == 'nginx' ]] && \
  kubectl delete -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.24.1/deploy/provider/cloud-generic.yaml \
