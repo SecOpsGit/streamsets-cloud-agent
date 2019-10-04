@@ -178,12 +178,14 @@ if [[ -z $(which uuidgen) ]]; then
 fi
 
 NS=${NS:-default}
+# Usually you want to use this alias so namespaces are handled for you
+KUBECTL_NS="kubectl -n $NS"
 
 # Check for resources left from previous runs of this script
-if [[ -n $(kubectl get deployments -n "$NS" --field-selector=metadata.name=launcher 2> /dev/null) || \
-      -n $(kubectl get ingress -n "$NS" 2> /dev/null | grep agent-ingress) || \
-      -n $(kubectl get configmaps -n "$NS" --field-selector=metadata.name=launcher-conf 2> /dev/null) || \
-      -n $(kubectl get svc -n "$NS" --field-selector=metadata.name=streamsets-agent 2> /dev/null) ]]; then
+if [[ -n $($KUBECTL_NS get deployments --field-selector=metadata.name=launcher 2> /dev/null) || \
+      -n $($KUBECTL_NS get ingress 2> /dev/null | grep agent-ingress) || \
+      -n $($KUBECTL_NS get configmaps --field-selector=metadata.name=launcher-conf 2> /dev/null) || \
+      -n $($KUBECTL_NS get svc --field-selector=metadata.name=streamsets-agent 2> /dev/null) ]]; then
   echo "Agent resources found in this namespace."
   echo "Either delete these resources by running delagent.sh or specify a different namespace (under Advanced options in the Install Agent screen) and retry to continue."
   exit 1
@@ -208,25 +210,25 @@ fi
 
 [[ $NS != "default" ]] && kubectl create namespace $NS
 
-kubectl create -f yaml/streamsets-agent-service.yaml -n $NS
+$KUBECTL_NS create -f yaml/streamsets-agent-service.yaml
 
 # Create config
 source update-conf.sh
 
 
-[[ ! -z "$PATH_MOUNT" ]] && kubectl create -f yaml/pv-dir-mount.yaml -n $NS
+[[ ! -z "$PATH_MOUNT" ]] && $KUBECTL_NS create -f yaml/pv-dir-mount.yaml
 
 # Deploy the configuration for the operator
-kubectl create configmap launcher-conf --from-file=launcher.conf -n $NS
+$KUBECTL_NS create configmap launcher-conf --from-file=launcher.conf
 
 # Deploy the configuration for executor start
-kubectl create configmap executor-cmd-config --from-file run_executor.sh
+$KUBECTL_NS create configmap executor-cmd-config --from-file run_executor.sh
 
 # Install Agent Roles
-kubectl apply -f yaml/streamsets-agent-roles.yaml -n $NS
+$KUBECTL_NS apply -f yaml/streamsets-agent-roles.yaml
 
 # Install Agent
-kubectl apply -f yaml/streamsets-agent.yaml -n $NS
+$KUBECTL_NS apply -f yaml/streamsets-agent.yaml
 
 # Wait for Agent to start up
 WAIT_MESSAGE="Starting Agent. This may take a few minutes...."
@@ -237,7 +239,7 @@ fi
 i=1
 sp="/-\|"
 echo -n "$WAIT_MESSAGE"
-until [[ $(kubectl get pods -n "$NS" -l app=launcher --field-selector=status.phase=Running 2> /dev/null) ]] && curl -Lf -k "$INGRESS_URL" -o /dev/null 2> /dev/null; do
+until [[ $($KUBECTL_NS get pods -l app=launcher --field-selector=status.phase=Running 2> /dev/null) ]] && curl -Lf -k "$INGRESS_URL" -o /dev/null 2> /dev/null; do
   printf "\b${sp:i++%${#sp}:1}"
   sleep 1
 done
